@@ -136,18 +136,24 @@ class Enemy(object):
         self.end = end
         self.walkCount = 0
         self.path = [self.x, self.end]
+        self.hitbox = (self.x + 18, self.y, 30, 60)
+        self.health = 10
+        self.visible = True
 
     def draw(self, win):
-        self.move()
-        if self.walkCount + 1 >= 33:
-            self.walkCount = 0
-        if self.vel > 0:
-            win.blit(self.walkRight[self.walkCount // 3], (self.x, self.y))
-        else:
-            win.blit(self.walkLeft[self.walkCount // 3], (self.x, self.y))
-        self.walkCount += 1
-        self.hitbox = (self.x + 18, self.y, 30, 60)
-        # pygame.draw.rect(win, (255, 0, 0), self.hitbox, 2)
+        if self.visible:
+            self.move()
+            if self.walkCount + 1 >= 33:
+                self.walkCount = 0
+            if self.vel > 0:
+                win.blit(self.walkRight[self.walkCount // 3], (self.x, self.y))
+            else:
+                win.blit(self.walkLeft[self.walkCount // 3], (self.x, self.y))
+            self.walkCount += 1
+            self.hitbox = (self.x + 18, self.y, 30, 60)
+            pygame.draw.rect(win, (255, 0, 0), (self.hitbox[0], self.hitbox[1] - 20, 40, 4))
+            pygame.draw.rect(win, (255, 255, 0),
+                             (self.hitbox[0], self.hitbox[1] - 20, 40 - (4 * (10 - self.health)), 4))
 
     def move(self):
         if self.vel > 0:
@@ -162,7 +168,12 @@ class Enemy(object):
                 self.x += self.vel
             else:
                 self.vel *= -1
-                self.walkCuount = 0
+                self.walkCount = 0
+
+    def hit(self):
+        self.health -= 1
+        if self.health <= 0:
+            self.visible = False
 
 
 def collide(box1, box2):
@@ -206,6 +217,8 @@ class Bullet(object):
 def redraw_window():
     """Refresh UI."""
     win.blit(bg, (0, 0))
+    text = font.render('Score : %d ' % score, 1, (0, 0, 0))
+    win.blit(text, (360, 10))
     for bullet in bullets:
         bullet.draw(win)
     for goblin in goblins:
@@ -217,31 +230,46 @@ def redraw_window():
 man = Player(50, 418, 64, 64)
 bullets = []
 goblins = []
-goblins.append(Enemy(0, 424, 64, 64, screen_width - 64))
 run = True
 enemybirth = 0
 enemyfreq = 100
+shootLoop = 0
+score = 0
+font = pygame.font.SysFont('comicsans', 30, True)
+
 while run:
     clock.tick(25)
+    if shootLoop > 0:
+        shootLoop += 1
+    if shootLoop > 5:
+        shootLoop = 0
     enemybirth += 1
     if enemybirth >= enemyfreq:
         enemybirth = 0
+        goblins.append(Enemy(0, 424, 64, 64, screen_width - 64))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
 
     for bullet in bullets[::-1]:
-        for goblin in goblins:
+        for goblin in goblins[::-1]:
             if collide(bullet.hitbox, goblin.hitbox):
                 bullets.pop(bullets.index(bullet))
+                goblin.hit()
+                score += 1
+                break
         if bullet.x < screen_width and bullet.x > 0:
             bullet.x += bullet.vel
         else:
             bullets.pop(bullets.index(bullet))
 
+    for goblin in goblins[::-1]:
+        if not goblin.visible:
+            goblins.pop(goblins.index(goblin))
+
     keys = pygame.key.get_pressed()
 
-    if keys[pygame.K_SPACE] and len(bullets) < 5000:
+    if keys[pygame.K_SPACE] and len(bullets) < 5000 and shootLoop == 0:
         if man.left:
             facing = -1
         else:
@@ -252,6 +280,7 @@ while run:
                 int(man.y + man.height // 2),
                 facing)
         )
+        shootLoop = 1
 
     if keys[pygame.K_LEFT] and man.x > 0:
         man.x -= man.vel
@@ -285,5 +314,7 @@ while run:
             man.jumpCount = 10
 
     redraw_window()
+    if keys[pygame.K_ESCAPE]:
+        run = False
 
 pygame.quit()

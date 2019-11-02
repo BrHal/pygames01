@@ -233,6 +233,7 @@ goblins = []
 run = True
 enemybirth = 0
 enemyfreq = 100
+enemyheight = 0
 shootLoop = 0
 score = 0
 font = pygame.font.SysFont('comicsans', 30, True)
@@ -246,7 +247,10 @@ while run:
     enemybirth += 1
     if enemybirth >= enemyfreq:
         enemybirth = 0
-        goblins.append(Enemy(0, 424, 64, 64, screen_width - 64))
+        goblins.append(Enemy(0, 424 - enemyheight, 64, 64, screen_width - 64))
+        enemyheight += 10
+        if enemyheight > 300:
+            enemyheight = 0
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
